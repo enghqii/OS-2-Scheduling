@@ -69,9 +69,11 @@ Process	processes[260];
 int num_process = 0;
 
 // Prototypes
+
 int init_input(char * filename);
-void print_processes();
 int check_process(Process* process);
+void print_processes();
+void reset_all_processes();
 
 bool all_process_done();
 
@@ -89,7 +91,9 @@ int main(int argc, char ** argv)
 	{
 		if(init_input(argv[1]))
 		{
-			//SJF_simulation();
+			SJF_simulation();
+            reset_all_processes();
+
             SRT_simulation();
 		}
 	}
@@ -196,6 +200,15 @@ int check_process(Process* process)
 	}
 
 	return true;
+}
+
+void reset_all_processes()
+{
+    int i = 0;
+    for(i = 0; i < num_process; i++)
+    {
+        reset_process(&processes[i]);
+    }
 }
 
 bool all_process_done()
