@@ -27,12 +27,15 @@ typedef struct _Process{
 	int state;
 	int running_time;
 
+    int complete_time;
+
 } Process;
 
 void reset_process(Process* this)
 {
 	this->state = STATE_NONE;
 	this->running_time = 0;
+    this->complete_time = 0;
 }
 
 void update_process(Process* this, int dt, int cpu_time)
@@ -53,8 +56,9 @@ void update_process(Process* this, int dt, int cpu_time)
     // exit
 	if(this->state != STATE_EXIT && (this->service_time == this->running_time))
 	{
+        this->complete_time = cpu_time;
 		this->state = STATE_EXIT;
-        printf("[%s] is now EXIT\n", this->pid);
+        printf("[%s] is now EXIT on time of [%d]\n", this->pid, this->complete_time);
 	}
 }
 
@@ -257,4 +261,23 @@ void SJF_simulation()
 		cpu_time += deltaTime;
         printf("=========================\n");
 	}
+
+    {
+        float avg_turnaround_time = 0;
+        float avg_waiting_time = 0;
+
+        int i = 0;
+        for(i = 0; i < num_proc; i++)
+        {
+            avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
+            avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
+        }
+
+        avg_turnaround_time /= num_proc;
+        avg_waiting_time /= num_proc;
+
+        printf("CPU TIME: %d\n", cpu_time);
+        printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
+        printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
+    }
 }
