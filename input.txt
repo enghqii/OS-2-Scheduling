@@ -1,4 +1,4 @@
-# pid arrive-time service-time priority
+# pid / arrive-time / service-time (distance) / priority
 P1 0 8 3
 P2 1 4 2
 P3 2 9 4
