@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <string.h>
 
 // Decl
 
@@ -43,18 +44,18 @@ void update_process(Process* this, int dt, int cpu_time)
         printf("[%s] is now READY\n", this->pid);
 	}
 
+    // running
+    if(this->state == STATE_RUNNING)
+    {
+        this->running_time += dt;
+    }
+
     // exit
 	if(this->state != STATE_EXIT && (this->service_time == this->running_time))
 	{
 		this->state = STATE_EXIT;
         printf("[%s] is now EXIT\n", this->pid);
 	}
-
-    // running
-    if(this->state == STATE_RUNNING)
-    {
-        this->running_time += dt;
-    }
 }
 
 // Global vars
@@ -92,7 +93,7 @@ int main(int argc, char ** argv)
 
 int init_input(char * filename)
 {
-	if(input = fopen(filename, "r"))
+	if((input = fopen(filename, "r")))
 	{
 		char 	line[256];
 
