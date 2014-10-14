@@ -66,7 +66,7 @@ void update_process(Process* this, int dt, int cpu_time)
 FILE *	input;
 
 Process	processes[260];
-int num_proc = 0;
+int num_process = 0;
 
 // Prototypes
 int init_input(char * filename);
@@ -76,6 +76,7 @@ int check_process(Process* process);
 bool all_process_done();
 
 void SJF_simulation();
+void SRT_simulation();
 
 int main(int argc, char ** argv)
 {
@@ -88,7 +89,8 @@ int main(int argc, char ** argv)
 	{
 		if(init_input(argv[1]))
 		{
-			SJF_simulation();
+			//SJF_simulation();
+            SRT_simulation();
 		}
 	}
 
@@ -101,7 +103,7 @@ int init_input(char * filename)
 	{
 		char 	line[256];
 
-		num_proc = 0;
+		num_process = 0;
 
 		while(fgets(line, sizeof(line), input))
 		{
@@ -113,13 +115,13 @@ int init_input(char * filename)
 			else
 			{
 				int ret = sscanf(line,"%2s %d %d %d\n",
-					processes[num_proc].pid,
-					&(processes[num_proc].arrive_time),
-					&(processes[num_proc].service_time),
-					&(processes[num_proc].priority)
+					processes[num_process].pid,
+					&(processes[num_process].arrive_time),
+					&(processes[num_process].service_time),
+					&(processes[num_process].priority)
 				);
 
-				reset_process(&processes[num_proc]);
+				reset_process(&processes[num_process]);
 
 				if(ret < 4)
 				{
@@ -127,13 +129,13 @@ int init_input(char * filename)
 					continue;
 				}
 
-				if(check_process(&processes[num_proc]) == false)
+				if(check_process(&processes[num_process]) == false)
 				{
 					continue;
 				}
 			}
 
-			num_proc++;
+			num_process++;
 		}
 
 		print_processes();
@@ -149,7 +151,7 @@ int init_input(char * filename)
 void print_processes()
 {
 	int i = 0;
-	for(i = 0; i < num_proc; i++){
+	for(i = 0; i < num_process; i++){
 
 		Process* process = &processes[i];
 
@@ -166,7 +168,7 @@ void print_processes()
 int check_process(Process* process)
 {
 	int i = 0;
-	for(i = 0; i < num_proc; i++)
+	for(i = 0; i < num_process; i++)
 	{
 		if(strcmp(processes[i].pid, process->pid) == 0)
 		{
@@ -199,7 +201,7 @@ int check_process(Process* process)
 bool all_process_done()
 {
 	int i=0;
-	for(i = 0; i < num_proc; i++)
+	for(i = 0; i < num_process; i++)
 	{
 		if(processes[i].state != STATE_EXIT)
 			return false;
@@ -207,20 +209,45 @@ bool all_process_done()
 	return true;
 }
 
+void simulation_output(int cpu_time)
+{
+
+    float avg_turnaround_time = 0;
+    float avg_waiting_time = 0;
+
+    int i = 0;
+    for(i = 0; i < num_process; i++)
+    {
+        printf("[%s]'s complete time is [%d]\n", processes[i].pid, processes[i].complete_time);
+
+        avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
+        avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
+    }
+
+    printf("\n");
+
+    avg_turnaround_time /= num_process;
+    avg_waiting_time /= num_process;
+
+    printf("CPU TIME: %d\n", cpu_time);
+    printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
+    printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
+
+}
+
 void SJF_simulation()
 {
-	const int deltaTime = 1;
+	const int   deltaTime = 1;
+	int         cpu_time = 0;
 
-	int cpu_time = 0;
-
-	Process * cur_process = NULL;
+	Process *   cur_process = NULL;
 
 	while(!all_process_done())
     {
         printf(" CPU TIME [%d] \n", cpu_time);
 		// update each process
 		int i = 0;
-		for(i = 0; i < num_proc; i++)
+		for(i = 0; i < num_process; i++)
 		{
 			update_process(&processes[i], deltaTime, cpu_time);
 		}
@@ -233,7 +260,7 @@ void SJF_simulation()
 			int shortest_time = INT_MAX;
 
 			int j = 0;
-			for(j = 0; j < num_proc; j++)
+			for(j = 0; j < num_process; j++)
 			{
 				if(processes[j].state == STATE_READY)
 				{
@@ -258,26 +285,77 @@ void SJF_simulation()
 		}
 
 		printf("Cur Process is [%s], runnin' time: [%d]\n", cur_process->pid, cur_process->running_time);
+
 		cpu_time += deltaTime;
         printf("=========================\n");
 	}
 
-    {
-        float avg_turnaround_time = 0;
-        float avg_waiting_time = 0;
+    printf("\n");
+    simulation_output(cpu_time);
+}
 
+void SRT_simulation()
+{
+    const int   deltaTime = 1;
+    int         cpu_time = 0;
+
+    Process *   cur_process = NULL;
+
+    printf("\nSRT simulating\n\n");
+
+    while(!all_process_done())
+    {
+        printf(" CPU TIME [%d] \n", cpu_time);
+        // update each process
         int i = 0;
-        for(i = 0; i < num_proc; i++)
+        for(i = 0; i < num_process; i++)
         {
-            avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
-            avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
+            update_process(&processes[i], deltaTime, cpu_time);
         }
 
-        avg_turnaround_time /= num_proc;
-        avg_waiting_time /= num_proc;
+        // pick next process
+        {
+            // ready and shortest
+            int target_index = -1;
+            int shortest_remaining_time = INT_MAX;
 
-        printf("CPU TIME: %d\n", cpu_time);
-        printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
-        printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
+            int j = 0;
+            for(j = 0; j < num_process; j++)
+            {
+                if(processes[j].state == STATE_READY || processes[j].state == STATE_RUNNING)
+                {
+                    int remaining_time = processes[j].service_time - processes[j].running_time;
+
+                    printf("~Remaining time of [%s] is [%d]\n",processes[j].pid, remaining_time);
+
+                    if( remaining_time < shortest_remaining_time )
+                    {
+                        target_index = j;
+                        shortest_remaining_time = remaining_time;
+                    }
+                }
+            }
+
+            if(target_index != -1)
+            {
+                printf("Changing process index of [%d]\n", target_index);
+
+                if(cur_process && (STATE_EXIT != cur_process->state))
+                    cur_process->state = STATE_READY;
+                cur_process = &processes[target_index];
+                cur_process->state = STATE_RUNNING;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        printf("Cur Process is [%s], runnin' time: [%d]\n", cur_process->pid, cur_process->running_time);
+        cpu_time += deltaTime;
+        printf("=========================\n");
     }
+
+    printf("\n");
+    simulation_output(cpu_time);
 }
