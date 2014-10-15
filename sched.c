@@ -5,6 +5,9 @@
 
 // Decl
 
+#define MAX_ROW 80
+#define MAX_GRAPH_DATA (MAX_ROW)
+
 enum PROCESS_STATE
 {
 	STATE_NONE = 0,
@@ -44,14 +47,14 @@ void update_process(Process* this, int dt, int cpu_time)
 	if(this->state != STATE_READY && (this->arrive_time == cpu_time))
 	{
 		this->state = STATE_READY;
-        printf("[%s] is now READY\n", this->pid);
+        //printf("[%s] is now READY\n", this->pid);
 	}
 
     // running
     if(this->state == STATE_RUNNING)
     {
         this->running_time += dt;
-        printf("Cur Process is [%s], runnin' time: [%d]\n", this->pid, this->running_time);
+        //printf("Cur Process is [%s], runnin' time: [%d]\n", this->pid, this->running_time);
     }
 
     // exit
@@ -59,7 +62,7 @@ void update_process(Process* this, int dt, int cpu_time)
 	{
         this->complete_time = cpu_time;
 		this->state = STATE_EXIT;
-        printf("[%s] is now EXIT on time of [%d]\n", this->pid, this->complete_time);
+        //printf("[%s] is now EXIT on time of [%d]\n", this->pid, this->complete_time);
 	}
 }
 
@@ -85,8 +88,6 @@ void PR_simulation();
 
 int main(int argc, char ** argv)
 {
-    printf("asdf\n");
-
 	if(argc < 2)
 	{
 		fprintf(stderr, "input file must specified\n");
@@ -96,7 +97,6 @@ int main(int argc, char ** argv)
 	{
 		if(init_input(argv[1]))
 		{
-            /*
             reset_all_processes();
 			SJF_simulation();
 
@@ -105,9 +105,9 @@ int main(int argc, char ** argv)
 
             reset_all_processes();
             RR_simulation();
-            */
+
             reset_all_processes();
-            RR_simulation();
+            PR_simulation();
 		}
 	}
 
@@ -155,7 +155,7 @@ int init_input(char * filename)
 			num_process++;
 		}
 
-		print_processes();
+		//print_processes();
 		return true;
 	}
 	else
@@ -235,8 +235,18 @@ bool all_process_done()
 	return true;
 }
 
-void simulation_output(int cpu_time)
+void init_graph_data(int* graph_data)
 {
+    int i = 0;
+    for (i = 0; i < MAX_GRAPH_DATA; i++)
+    {
+        graph_data[i] = -1;
+    }
+}
+
+void simulation_output(char* title, int cpu_time, int graph_data[MAX_GRAPH_DATA])
+{
+    // need to compute some vars
 
     float avg_turnaround_time = 0;
     float avg_waiting_time = 0;
@@ -244,21 +254,42 @@ void simulation_output(int cpu_time)
     int i = 0;
     for(i = 0; i < num_process; i++)
     {
-        printf("[%s]'s complete time is [%d]\n", processes[i].pid, processes[i].complete_time);
+        //printf("[%s]'s complete time is [%d]\n", processes[i].pid, processes[i].complete_time);
 
         avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
         avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
     }
 
-    printf("\n");
+    //printf("\n");
 
     avg_turnaround_time /= num_process;
     avg_waiting_time /= num_process;
+
+    /// print out begin
+    printf("[%s]\n", title);
+
+    for(i = 0; i < num_process; i++)
+    {
+        int j = 0;
+
+        printf("%2s ", processes[i].pid);
+
+        for(j = 0; j < MAX_GRAPH_DATA; j++)
+        {
+            if(graph_data[j] == i)
+                printf("*");
+            else
+                printf(" ");
+        }
+
+        printf("\n");
+    }
 
     printf("CPU TIME: %d\n", cpu_time);
     printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
     printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
 
+    printf("\n");
 }
 
 void SJF_simulation()
@@ -268,9 +299,13 @@ void SJF_simulation()
 
 	Process *   cur_process = NULL;
 
+    int         graph_data[MAX_GRAPH_DATA];
+    init_graph_data(graph_data);
+
 	while(!all_process_done())
     {
-        printf(" CPU TIME [%d] \n", cpu_time);
+        //printf(" CPU TIME [%d] \n", cpu_time);
+
 		// update each process
 		int i = 0;
 		for(i = 0; i < num_process; i++)
@@ -300,7 +335,7 @@ void SJF_simulation()
 
             if(target_index != -1)
             {
-                printf("Changing process index of [%d]\n", target_index);
+                //printf("Changing process index of [%d]\n", target_index);
                 cur_process = &processes[target_index];
                 cur_process->state = STATE_RUNNING;
             }
@@ -310,14 +345,13 @@ void SJF_simulation()
             }
 		}
 
-		printf("Cur Process is [%s], runnin' time: [%d]\n", cur_process->pid, cur_process->running_time);
-
+        graph_data[cpu_time] = (int)(cur_process - processes);
 		cpu_time += deltaTime;
-        printf("=========================\n");
+        //printf("=========================\n");
 	}
 
-    printf("\n");
-    simulation_output(cpu_time);
+    //printf("\n");
+    simulation_output("SJF" ,cpu_time, graph_data);
 }
 
 void SRT_simulation()
@@ -327,11 +361,14 @@ void SRT_simulation()
 
     Process *   cur_process = NULL;
 
-    printf("\nSRT simulating\n\n");
+    int         graph_data[MAX_GRAPH_DATA];
+    init_graph_data(graph_data);
+
+    //printf("\nSRT simulating\n\n");
 
     while(!all_process_done())
     {
-        printf(" CPU TIME [%d] \n", cpu_time);
+        //printf(" CPU TIME [%d] \n", cpu_time);
         // update each process
         int i = 0;
         for(i = 0; i < num_process; i++)
@@ -351,8 +388,7 @@ void SRT_simulation()
                 if(processes[j].state == STATE_READY || processes[j].state == STATE_RUNNING)
                 {
                     int remaining_time = processes[j].service_time - processes[j].running_time;
-
-                    printf("~Remaining time of [%s] is [%d]\n",processes[j].pid, remaining_time);
+                    //printf("~Remaining time of [%s] is [%d]\n",processes[j].pid, remaining_time);
 
                     if( remaining_time < shortest_remaining_time )
                     {
@@ -364,7 +400,7 @@ void SRT_simulation()
 
             if(target_index != -1)
             {
-                printf("Changing process index of [%d]\n", target_index);
+                //printf("Changing process index of [%d]\n", target_index);
 
                 if(cur_process && (STATE_EXIT != cur_process->state))
                     cur_process->state = STATE_READY;
@@ -377,13 +413,13 @@ void SRT_simulation()
             }
         }
 
-        printf("Cur Process is [%s], runnin' time: [%d]\n", cur_process->pid, cur_process->running_time);
+        graph_data[cpu_time] = (int)(cur_process - processes);
         cpu_time += deltaTime;
-        printf("=========================\n");
+        //printf("=========================\n");
     }
 
-    printf("\n");
-    simulation_output(cpu_time);
+    //printf("\n");
+    simulation_output("SRT", cpu_time, graph_data);
 }
 
 void RR_simulation()
@@ -393,13 +429,16 @@ void RR_simulation()
     int         cpu_time = 0;
 
     int         cur_process_index = 0;
-    Process *   cur_process = &processes[cur_process_index];
+    Process *   cur_process = NULL;
 
-    printf("\nRR simulating\n\n");
+    int         graph_data[MAX_GRAPH_DATA];
+    init_graph_data(graph_data);
+
+    //printf("\nRR simulating\n\n");
 
     while(true)
     {
-        printf(" CPU TIME [%d] \n", cpu_time);
+        //printf(" CPU TIME [%d] \n", cpu_time);
 
         // update each process
         int i = 0;
@@ -416,7 +455,6 @@ void RR_simulation()
         // it's time to rotation
         if(cpu_time % time_quantum == 0)
         {
-            // cond - STATE_READY
             int cnt = 0;
             do
             {
@@ -435,13 +473,14 @@ void RR_simulation()
         }
 
         {
+            graph_data[cpu_time] = (int)(cur_process - processes);
             cpu_time += deltaTime;
         }
 
-        printf("=========================\n");
+        //printf("=========================\n");
     }
 
-    simulation_output(cpu_time);
+    simulation_output("RR", cpu_time, graph_data);
 }
 
 void PR_simulation()
@@ -451,11 +490,14 @@ void PR_simulation()
 
     Process *   cur_process = NULL;
 
-    printf("\nPR simulating\n\n");
+    int         graph_data[MAX_GRAPH_DATA];
+    init_graph_data(graph_data);
+
+    //printf("\nPR simulating\n\n");
 
     while(!all_process_done())
     {
-        printf(" CPU TIME [%d] \n", cpu_time);
+        //printf(" CPU TIME [%d] \n", cpu_time);
         // update each process
         int i = 0;
         for (i = 0; i < num_process; i++)
@@ -496,11 +538,12 @@ void PR_simulation()
         }
 
         {
+            graph_data[cpu_time] = (int)(cur_process - processes);
             cpu_time += deltaTime;
         }
 
-        printf("=========================\n");
+        //printf("=========================\n");
     }
 
-    simulation_output(cpu_time);
+    simulation_output("PR", cpu_time, graph_data);
 }
