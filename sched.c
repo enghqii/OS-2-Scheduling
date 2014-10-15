@@ -96,6 +96,7 @@ int main(int argc, char ** argv)
 	{
 		if(init_input(argv[1]))
 		{
+            /*
             reset_all_processes();
 			SJF_simulation();
 
@@ -104,9 +105,9 @@ int main(int argc, char ** argv)
 
             reset_all_processes();
             RR_simulation();
-
+            */
             reset_all_processes();
-            PR_simulation();
+            RR_simulation();
 		}
 	}
 
@@ -396,7 +397,7 @@ void RR_simulation()
 
     printf("\nRR simulating\n\n");
 
-    while(!all_process_done())
+    while(true)
     {
         printf(" CPU TIME [%d] \n", cpu_time);
 
@@ -405,6 +406,11 @@ void RR_simulation()
         for (i = 0; i < num_process; i++)
         {
             update_process(&processes[i], deltaTime, cpu_time);
+        }
+
+        if(all_process_done())
+        {
+            break;
         }
 
         // it's time to rotation
@@ -417,16 +423,10 @@ void RR_simulation()
                 cur_process_index++;
                 cur_process_index %= num_process;
 
-                printf("I'm in the loop~ [%d]\n", cur_process_index);
-
                 cnt++;
 
             }while(processes[cur_process_index].state != STATE_READY && cnt < num_process);
 
-            if(all_process_done())
-            {
-                break;
-            }
 
             if(cur_process && (STATE_EXIT != cur_process->state))
                 cur_process->state = STATE_READY;
@@ -446,5 +446,61 @@ void RR_simulation()
 
 void PR_simulation()
 {
+    const int   deltaTime = 1;
+    int         cpu_time = 0;
 
+    Process *   cur_process = NULL;
+
+    printf("\nPR simulating\n\n");
+
+    while(!all_process_done())
+    {
+        printf(" CPU TIME [%d] \n", cpu_time);
+        // update each process
+        int i = 0;
+        for (i = 0; i < num_process; i++)
+        {
+            update_process(&processes[i], deltaTime, cpu_time);
+        }
+
+        if(all_process_done())
+        {
+            break;
+        }
+
+        // pick next
+        {
+            int target_index = -1;
+            int min_prior = INT_MAX;
+
+            int j = 0;
+            for (j = 0; j < num_process; j++)
+            {
+                if(processes[j].state == STATE_READY || processes[j].state == STATE_RUNNING)
+                {
+                    if(min_prior > processes[j].priority)
+                    {
+                        target_index = j;
+                        min_prior = processes[j].priority;
+                    }
+                }
+            }
+
+            if(target_index != -1 && (cur_process != &processes[target_index]))
+            {
+                if(cur_process && (STATE_EXIT != cur_process->state))
+                    cur_process->state = STATE_READY;
+                cur_process = &processes[target_index];
+                cur_process->state = STATE_RUNNING;
+            }
+        }
+
+        {
+            cpu_time += deltaTime;
+        }
+
+        printf("=========================\n");
+    }
+
+    simulation_output(cpu_time);
 }
