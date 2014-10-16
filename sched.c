@@ -8,7 +8,7 @@
 #define MAX_ROW 80
 #define MAX_GRAPH_DATA (MAX_ROW)
 
-// Process BEGIN
+// Process.h BEGIN
 
 enum PROCESS_STATE
 {
@@ -34,6 +34,17 @@ typedef struct _Process{
 
 } Process;
 
+void reset_process(Process* this);
+void update_process(Process* this, int dt, int wall_time, int* graph_data);
+
+/* GLOBAL */
+FILE *  input;
+Process processes[260];
+int num_process = 0;
+
+// Process.h END
+
+// Process.c BEGIN
 void reset_process(Process* this)
 {
     this->state = STATE_NONE;
@@ -41,10 +52,10 @@ void reset_process(Process* this)
     this->complete_time = 0;
 }
 
-void update_process(Process* this, int dt, int cpu_time)
+void update_process(Process* this, int dt, int wall_time, int* graph_data)
 {
     // arrive
-    if(this->state != STATE_READY && (this->arrive_time == cpu_time))
+    if(this->state != STATE_READY && (this->arrive_time == wall_time))
     {
         this->state = STATE_READY;
         //printf("[%s] is now READY\n", this->pid);
@@ -55,29 +66,22 @@ void update_process(Process* this, int dt, int cpu_time)
     {
         this->running_time += dt;
         //printf("Cur Process is [%s], runnin' time: [%d]\n", this->pid, this->running_time);
+        graph_data[wall_time] = (int) (this - processes);
     }
 
     // exit
     if(this->state != STATE_EXIT && (this->service_time == this->running_time))
     {
-        this->complete_time = cpu_time;
+        this->complete_time = wall_time;
         this->state = STATE_EXIT;
         //printf("[%s] is now EXIT on time of [%d]\n", this->pid, this->complete_time);
     }
 }
-
-// Process END
-
-// Global vars
-FILE *  input;
-
-Process processes[260];
-int num_process = 0;
+// Process.c END
 
 // Prototypes
 int init_input(char * filename);
 int check_process(Process* process, int line);
-void print_processes();
 void reset_all_processes();
 
 void SJF_simulation();
@@ -165,23 +169,6 @@ int init_input(char * filename)
     }
 }
 
-void print_processes()
-{
-    int i = 0;
-    for(i = 0; i < num_process; i++){
-
-        Process* process = &processes[i];
-
-        printf("[%d] pid : %s arrival : %d service : %d priority : %d\n",
-            i,
-            process->pid,
-            process->arrive_time,
-            process->service_time,
-            process->priority
-        );
-    }
-}
-
 bool is_capital_alpha_or_digit(char c)
 {
     return (('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')? true : false);
@@ -260,7 +247,7 @@ void SJF_simulation()
         int i = 0;
         for(i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, wall_time);
+            update_process(&processes[i], deltaTime, wall_time, graph_data);
         }
 
         if(all_process_done())
@@ -297,10 +284,7 @@ void SJF_simulation()
         }
 
         if(cur_process)
-        {
-            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
-        }
         wall_time += deltaTime;
         //printf("=========================\n");
     }
@@ -329,7 +313,7 @@ void SRT_simulation()
         int i = 0;
         for(i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, wall_time);
+            update_process(&processes[i], deltaTime, wall_time, graph_data);
         }
 
         if(all_process_done())
@@ -371,10 +355,7 @@ void SRT_simulation()
         }
 
         if(cur_process)
-        {
-            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
-        }
         wall_time += deltaTime;
         //printf("=========================\n");
     }
@@ -387,6 +368,7 @@ void RR_simulation()
 {
     const int   time_quantum = 1;
     const int   deltaTime = 1;
+
     int         cpu_time = 0;
     int         wall_time = 0;
 
@@ -406,7 +388,7 @@ void RR_simulation()
         int i = 0;
         for (i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, wall_time);
+            update_process(&processes[i], deltaTime, wall_time, graph_data);
         }
 
         if(all_process_done())
@@ -415,7 +397,7 @@ void RR_simulation()
         }
 
         // it's time to rotation
-        if(cpu_time % time_quantum == 0)
+        if(wall_time % time_quantum == 0)
         {
             int cnt = 0;
             do
@@ -435,10 +417,7 @@ void RR_simulation()
         }
 
         if(cur_process)
-        {
-            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
-        }
         wall_time += deltaTime;
         //printf("=========================\n");
     }
@@ -466,7 +445,7 @@ void PR_simulation()
         int i = 0;
         for (i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, wall_time);
+            update_process(&processes[i], deltaTime, wall_time, graph_data);
         }
 
         if(all_process_done())
@@ -502,10 +481,7 @@ void PR_simulation()
         }
 
         if(cur_process)
-        {
-            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
-        }
         wall_time += deltaTime;
         //printf("=========================\n");
     }
@@ -561,7 +537,7 @@ void simulation_output(char* title, int cpu_time, int graph_data[MAX_GRAPH_DATA]
     {
         int j = 0;
 
-        printf("%2s ", processes[i].pid);
+        printf("%2s", processes[i].pid);
 
         for(j = 0; j < MAX_GRAPH_DATA; j++)
         {
