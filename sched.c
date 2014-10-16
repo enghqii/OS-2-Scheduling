@@ -8,27 +8,27 @@
 #define MAX_ROW 80
 #define MAX_GRAPH_DATA (MAX_ROW)
 
+// Process BEGIN
+
 enum PROCESS_STATE
 {
-	STATE_NONE = 0,
-	STATE_READY,
-	STATE_RUNNING,
-	STATE_EXIT,
+    STATE_NONE = 0,
+    STATE_READY,
+    STATE_RUNNING,
+    STATE_EXIT,
 };
-
-// Process
 
 typedef struct _Process{
 
-	// readonly
-	char pid[3];
-	int arrive_time;
-	int service_time;
-	int priority;
+    // readonly
+    char pid[3];
+    int arrive_time;
+    int service_time;
+    int priority;
 
-	// real time
-	int state;
-	int running_time;
+    // real time
+    int state;
+    int running_time;
 
     int complete_time;
 
@@ -36,19 +36,19 @@ typedef struct _Process{
 
 void reset_process(Process* this)
 {
-	this->state = STATE_NONE;
-	this->running_time = 0;
+    this->state = STATE_NONE;
+    this->running_time = 0;
     this->complete_time = 0;
 }
 
 void update_process(Process* this, int dt, int cpu_time)
 {
     // arrive
-	if(this->state != STATE_READY && (this->arrive_time == cpu_time))
-	{
-		this->state = STATE_READY;
+    if(this->state != STATE_READY && (this->arrive_time == cpu_time))
+    {
+        this->state = STATE_READY;
         //printf("[%s] is now READY\n", this->pid);
-	}
+    }
 
     // running
     if(this->state == STATE_RUNNING)
@@ -58,28 +58,27 @@ void update_process(Process* this, int dt, int cpu_time)
     }
 
     // exit
-	if(this->state != STATE_EXIT && (this->service_time == this->running_time))
-	{
+    if(this->state != STATE_EXIT && (this->service_time == this->running_time))
+    {
         this->complete_time = cpu_time;
-		this->state = STATE_EXIT;
+        this->state = STATE_EXIT;
         //printf("[%s] is now EXIT on time of [%d]\n", this->pid, this->complete_time);
-	}
+    }
 }
 
-// Global vars
-FILE *	input;
+// Process END
 
-Process	processes[260];
+// Global vars
+FILE *  input;
+
+Process processes[260];
 int num_process = 0;
 
 // Prototypes
-
 int init_input(char * filename);
-int check_process(Process* process);
+int check_process(Process* process, int line);
 void print_processes();
 void reset_all_processes();
-
-bool all_process_done();
 
 void SJF_simulation();
 void SRT_simulation();
@@ -88,17 +87,17 @@ void PR_simulation();
 
 int main(int argc, char ** argv)
 {
-	if(argc < 2)
-	{
-		fprintf(stderr, "input file must specified\n");
-		return -1;
-	}
-	else
-	{
-		if(init_input(argv[1]))
-		{
+    if(argc < 2)
+    {
+        fprintf(stderr, "input file must specified\n");
+        return -1;
+    }
+    else
+    {
+        if(init_input(argv[1]))
+        {
             reset_all_processes();
-			SJF_simulation();
+            SJF_simulation();
 
             reset_all_processes();
             SRT_simulation();
@@ -108,111 +107,123 @@ int main(int argc, char ** argv)
 
             reset_all_processes();
             PR_simulation();
-		}
-	}
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 int init_input(char * filename)
 {
-	if((input = fopen(filename, "r")))
-	{
-		char 	line[256];
+    if((input = fopen(filename, "r")))
+    {
+        int     line_number = 0;
+        char    line[256];
+        num_process = 0;
 
-		num_process = 0;
+        while(fgets(line, sizeof(line), input))
+        {
+            line_number++;
 
-		while(fgets(line, sizeof(line), input))
-		{
+            if(line[0] == '#' || line[0] == '\n' || line[0] == '\0')
+            {
+                continue;
+            }
+            else
+            {
+                int ret = sscanf(line,"%2s %d %d %d\n",
+                    processes[num_process].pid,
+                    &(processes[num_process].arrive_time),
+                    &(processes[num_process].service_time),
+                    &(processes[num_process].priority)
+                );
 
-			if(line[0] == '#')
-			{
-				continue;
-			}
-			else
-			{
-				int ret = sscanf(line,"%2s %d %d %d\n",
-					processes[num_process].pid,
-					&(processes[num_process].arrive_time),
-					&(processes[num_process].service_time),
-					&(processes[num_process].priority)
-				);
+                reset_process(&processes[num_process]);
 
-				reset_process(&processes[num_process]);
+                if(ret < 4)
+                {
+                    fprintf(stderr, "invalid format in line %d\n", line_number);
+                    continue;
+                }
 
-				if(ret < 4)
-				{
-					fprintf(stderr, "invalid format\n");
-					continue;
-				}
+                if(check_process(&processes[num_process], line_number) == false)
+                {
+                    continue;
+                }
+            }
 
-				if(check_process(&processes[num_process]) == false)
-				{
-					continue;
-				}
-			}
+            num_process++;
+        }
 
-			num_process++;
-		}
-
-		//print_processes();
-		return true;
-	}
-	else
-	{
-		fprintf(stderr, "failed to load input file \'%s\'\n", filename);
-		return false;
-	}
+        //print_processes();
+        return true;
+    }
+    else
+    {
+        fprintf(stderr, "failed to load input file \'%s\'\n", filename);
+        return false;
+    }
 }
 
 void print_processes()
 {
-	int i = 0;
-	for(i = 0; i < num_process; i++){
+    int i = 0;
+    for(i = 0; i < num_process; i++){
 
-		Process* process = &processes[i];
+        Process* process = &processes[i];
 
-		printf("[%d] pid : %s arrival : %d service : %d priority : %d\n",
-			i,
-			process->pid,
-			process->arrive_time,
-			process->service_time,
-			process->priority
-		);
-	}
+        printf("[%d] pid : %s arrival : %d service : %d priority : %d\n",
+            i,
+            process->pid,
+            process->arrive_time,
+            process->service_time,
+            process->priority
+        );
+    }
 }
 
-int check_process(Process* process)
+bool is_capital_alpha_or_digit(char c)
 {
-	int i = 0;
-	for(i = 0; i < num_process; i++)
-	{
-		if(strcmp(processes[i].pid, process->pid) == 0)
-		{
-			fprintf(stderr, "duplicate process id \'%s\'\n", process->pid);
-			return false;
-		}
-	}
+    return (('A' <= c && c <= 'Z') || ('0' <= c && c <= '9')? true : false);
+}
 
-	if( 0 > process->arrive_time || process->arrive_time > 30 )
-	{
-		fprintf(stderr, "invalid arrive time \'%d\'\n", process->arrive_time);
-		return false;
-	}
+int check_process(Process* process, int line)
+{
+    int i = 0;
 
-	if( 1 > process->service_time || process->service_time > 30 )
-	{
-		fprintf(stderr, "invalid service time \'%d\'\n", process->service_time);
-		return false;
-	}
+    if(strlen(process->pid) != 2 || !(is_capital_alpha_or_digit(process->pid[0]) && is_capital_alpha_or_digit(process->pid[1])))
+    {
+        printf("invalid process id \'%s\' in line %d, ignored", process->pid, line);
+    }
 
-	if( 1 > process->priority || process->priority > 10 )
-	{
-		fprintf(stderr, "invalid priority \'%d\'\n", process->priority);
-		return false;
-	}
+    for(i = 0; i < num_process; i++)
+    {
+        if(strcmp(processes[i].pid, process->pid) == 0)
+        {
+            fprintf(stderr, "duplicate process id \'%s\' in line %d, ignored\n", process->pid, line);
+            return false;
+        }
+    }
 
-	return true;
+    if( 0 > process->arrive_time || process->arrive_time > 30 )
+    {
+        fprintf(stderr, "invalid arrive time \'%d\' in line %d, ignored\n", process->arrive_time, line);
+        return false;
+    }
+
+    if( 1 > process->service_time || process->service_time > 30 )
+    {
+        fprintf(stderr, "invalid service time \'%d\' in line %d, ignored\n", process->service_time, line);
+        return false;
+    }
+
+    if( 1 > process->priority || process->priority > 10 )
+    {
+        fprintf(stderr, "invalid priority \'%d\' in line %d, ignored\n", process->priority, line);
+        return false;
+    }
+
+    return true;
 }
 
 void reset_all_processes()
@@ -224,114 +235,52 @@ void reset_all_processes()
     }
 }
 
-bool all_process_done()
-{
-	int i=0;
-	for(i = 0; i < num_process; i++)
-	{
-		if(processes[i].state != STATE_EXIT)
-			return false;
-	}
-	return true;
-}
+// Simulation related
 
-void init_graph_data(int* graph_data)
-{
-    int i = 0;
-    for (i = 0; i < MAX_GRAPH_DATA; i++)
-    {
-        graph_data[i] = -1;
-    }
-}
-
-void simulation_output(char* title, int cpu_time, int graph_data[MAX_GRAPH_DATA])
-{
-    // need to compute some vars
-
-    float avg_turnaround_time = 0;
-    float avg_waiting_time = 0;
-
-    int i = 0;
-    for(i = 0; i < num_process; i++)
-    {
-        //printf("[%s]'s complete time is [%d]\n", processes[i].pid, processes[i].complete_time);
-
-        avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
-        avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
-    }
-
-    //printf("\n");
-
-    avg_turnaround_time /= num_process;
-    avg_waiting_time /= num_process;
-
-    /// print out begin
-    printf("[%s]\n", title);
-
-    for(i = 0; i < num_process; i++)
-    {
-        int j = 0;
-
-        printf("%2s ", processes[i].pid);
-
-        for(j = 0; j < MAX_GRAPH_DATA; j++)
-        {
-            if(graph_data[j] == i)
-                printf("*");
-            else
-                printf(" ");
-        }
-
-        printf("\n");
-    }
-
-    printf("CPU TIME: %d\n", cpu_time);
-    printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
-    printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
-
-    printf("\n");
-}
+bool all_process_done();
+void init_graph_data(int* graph_data);
+void simulation_output(char* title, int cpu_time, int graph_data[MAX_GRAPH_DATA]);
 
 void SJF_simulation()
 {
-	const int   deltaTime = 1;
-	int         cpu_time = 0;
+    const int   deltaTime = 1;
+    int         cpu_time = 0;
 
-	Process *   cur_process = NULL;
+    Process *   cur_process = NULL;
 
     int         graph_data[MAX_GRAPH_DATA];
     init_graph_data(graph_data);
 
-	while(!all_process_done())
+    while(!all_process_done())
     {
         //printf(" CPU TIME [%d] \n", cpu_time);
 
-		// update each process
-		int i = 0;
-		for(i = 0; i < num_process; i++)
-		{
-			update_process(&processes[i], deltaTime, cpu_time);
-		}
+        // update each process
+        int i = 0;
+        for(i = 0; i < num_process; i++)
+        {
+            update_process(&processes[i], deltaTime, cpu_time);
+        }
 
-		// pick next process
-		if( cur_process == NULL || cur_process->state != STATE_RUNNING )
-		{
-			// ready and shortest
-			int target_index = -1;
-			int shortest_time = INT_MAX;
+        // pick next process
+        if( cur_process == NULL || cur_process->state != STATE_RUNNING )
+        {
+            // ready and shortest
+            int target_index = -1;
+            int shortest_time = INT_MAX;
 
-			int j = 0;
-			for(j = 0; j < num_process; j++)
-			{
-				if(processes[j].state == STATE_READY)
-				{
-					if( processes[j].service_time < shortest_time )
-					{
-						target_index = j;
-						shortest_time = processes[j].service_time;
-					}
-				}
-			}
+            int j = 0;
+            for(j = 0; j < num_process; j++)
+            {
+                if(processes[j].state == STATE_READY)
+                {
+                    if( processes[j].service_time < shortest_time )
+                    {
+                        target_index = j;
+                        shortest_time = processes[j].service_time;
+                    }
+                }
+            }
 
             if(target_index != -1)
             {
@@ -343,12 +292,12 @@ void SJF_simulation()
             {
                 break;
             }
-		}
+        }
 
         graph_data[cpu_time] = (int)(cur_process - processes);
-		cpu_time += deltaTime;
+        cpu_time += deltaTime;
         //printf("=========================\n");
-	}
+    }
 
     //printf("\n");
     simulation_output("SJF" ,cpu_time, graph_data);
@@ -546,4 +495,72 @@ void PR_simulation()
     }
 
     simulation_output("PR", cpu_time, graph_data);
+}
+
+bool all_process_done()
+{
+    int i=0;
+    for(i = 0; i < num_process; i++)
+    {
+        if(processes[i].state != STATE_EXIT)
+            return false;
+    }
+    return true;
+}
+
+void init_graph_data(int* graph_data)
+{
+    int i = 0;
+    for (i = 0; i < MAX_GRAPH_DATA; i++)
+    {
+        graph_data[i] = -1;
+    }
+}
+
+void simulation_output(char* title, int cpu_time, int graph_data[MAX_GRAPH_DATA])
+{
+    // need to compute some vars
+
+    float avg_turnaround_time = 0;
+    float avg_waiting_time = 0;
+
+    int i = 0;
+    for(i = 0; i < num_process; i++)
+    {
+        //printf("[%s]'s complete time is [%d]\n", processes[i].pid, processes[i].complete_time);
+
+        avg_turnaround_time += (processes[i].complete_time - processes[i].arrive_time);
+        avg_waiting_time += (processes[i].complete_time - processes[i].arrive_time) - processes[i].service_time;
+    }
+
+    //printf("\n");
+
+    avg_turnaround_time /= num_process;
+    avg_waiting_time /= num_process;
+
+    /// print out begin
+    printf("[%s]\n", title);
+
+    for(i = 0; i < num_process; i++)
+    {
+        int j = 0;
+
+        printf("%2s ", processes[i].pid);
+
+        for(j = 0; j < MAX_GRAPH_DATA; j++)
+        {
+            if(graph_data[j] == i)
+                printf("*");
+            else
+                printf(" ");
+        }
+
+        printf("\n");
+    }
+
+    printf("CPU TIME: %d\n", cpu_time);
+    printf("AVERAGE TURNAROUND TIME: %.2f\n", avg_turnaround_time);
+    printf("AVERAGE WAITING TIME: %.2f\n", avg_waiting_time);
+
+    printf("\n");
 }

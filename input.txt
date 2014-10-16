@@ -1,5 +1,20 @@
 # pid / arrive-time / service-time (distance) / priority
+
 P1 0 8 3
 P2 1 4 2
 P3 2 9 4
 P4 3 5 1
+
+# Invalid input fmt
+A1 aad
+# Invalid id fmt
+Abc 1 23 3
+# duplicate id
+P1 1 2 3
+
+# invalid arr
+A2 123 1 2
+# invalid serv
+A3 0 1231 4
+# invalid prior
+A4 0 2 123123
