@@ -245,6 +245,7 @@ void SJF_simulation()
 {
     const int   deltaTime = 1;
     int         cpu_time = 0;
+    int         wall_time = 0;
 
     Process *   cur_process = NULL;
 
@@ -259,7 +260,12 @@ void SJF_simulation()
         int i = 0;
         for(i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, cpu_time);
+            update_process(&processes[i], deltaTime, wall_time);
+        }
+
+        if(all_process_done())
+        {
+            break;
         }
 
         // pick next process
@@ -288,14 +294,14 @@ void SJF_simulation()
                 cur_process = &processes[target_index];
                 cur_process->state = STATE_RUNNING;
             }
-            else
-            {
-                break;
-            }
         }
 
-        graph_data[cpu_time] = (int)(cur_process - processes);
-        cpu_time += deltaTime;
+        if(cur_process)
+        {
+            graph_data[wall_time] = (int) (cur_process - processes);
+            cpu_time += deltaTime;
+        }
+        wall_time += deltaTime;
         //printf("=========================\n");
     }
 
@@ -307,6 +313,7 @@ void SRT_simulation()
 {
     const int   deltaTime = 1;
     int         cpu_time = 0;
+    int         wall_time = 0;
 
     Process *   cur_process = NULL;
 
@@ -322,7 +329,12 @@ void SRT_simulation()
         int i = 0;
         for(i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, cpu_time);
+            update_process(&processes[i], deltaTime, wall_time);
+        }
+
+        if(all_process_done())
+        {
+            break;
         }
 
         // pick next process
@@ -356,14 +368,14 @@ void SRT_simulation()
                 cur_process = &processes[target_index];
                 cur_process->state = STATE_RUNNING;
             }
-            else
-            {
-                break;
-            }
         }
 
-        graph_data[cpu_time] = (int)(cur_process - processes);
-        cpu_time += deltaTime;
+        if(cur_process)
+        {
+            graph_data[wall_time] = (int) (cur_process - processes);
+            cpu_time += deltaTime;
+        }
+        wall_time += deltaTime;
         //printf("=========================\n");
     }
 
@@ -376,6 +388,7 @@ void RR_simulation()
     const int   time_quantum = 1;
     const int   deltaTime = 1;
     int         cpu_time = 0;
+    int         wall_time = 0;
 
     int         cur_process_index = 0;
     Process *   cur_process = NULL;
@@ -393,7 +406,7 @@ void RR_simulation()
         int i = 0;
         for (i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, cpu_time);
+            update_process(&processes[i], deltaTime, wall_time);
         }
 
         if(all_process_done())
@@ -421,11 +434,12 @@ void RR_simulation()
             cur_process->state = STATE_RUNNING;
         }
 
+        if(cur_process)
         {
-            graph_data[cpu_time] = (int)(cur_process - processes);
+            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
         }
-
+        wall_time += deltaTime;
         //printf("=========================\n");
     }
 
@@ -436,6 +450,7 @@ void PR_simulation()
 {
     const int   deltaTime = 1;
     int         cpu_time = 0;
+    int         wall_time = 0;
 
     Process *   cur_process = NULL;
 
@@ -451,7 +466,7 @@ void PR_simulation()
         int i = 0;
         for (i = 0; i < num_process; i++)
         {
-            update_process(&processes[i], deltaTime, cpu_time);
+            update_process(&processes[i], deltaTime, wall_time);
         }
 
         if(all_process_done())
@@ -486,11 +501,12 @@ void PR_simulation()
             }
         }
 
+        if(cur_process)
         {
-            graph_data[cpu_time] = (int)(cur_process - processes);
+            graph_data[wall_time] = (int) (cur_process - processes);
             cpu_time += deltaTime;
         }
-
+        wall_time += deltaTime;
         //printf("=========================\n");
     }
 
